@@ -1,1 +1,1 @@
-web: gunicorn Stockfy.wsgi
+web: gunicorn Stockfy.Stockfy.wsgi
