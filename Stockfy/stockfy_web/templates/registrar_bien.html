@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Bien</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        form {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            margin-top: 30px;
+            color: #444;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .foto-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        video {
+            border: 2px solid #007bff;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            display: block;
+            margin: 10px auto;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .btn-inline {
+            display: inline-block;
+            width: auto;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h2>Registro de Bien Inmueble</h2>
+
+        {{ form.as_p }}
+
+        <h3 id="titulo_foto">Foto del inmueble</h3>
+        <div class="foto-section">
+            <video id="video" width="320" height="240" autoplay></video>
+            <div>
+                <button type="button" id="snap" class="btn-inline">Tomar foto</button>
+                <button type="button" id="retry" class="btn-inline" style="display:none;">Volver a tomar</button>
+            </div>
+            <canvas id="canvas_inmueble" width="320" height="240"></canvas>
+            <label>Foto del inmueble</label>
+
+            <canvas id="canvas_etiqueta" width="320" height="240"></canvas>
+            <label>Foto de la etiqueta</label>
+        </div>
+
+        <input type="hidden" name="foto_inmueble" id="input_inmueble">
+        <input type="hidden" name="foto_etiqueta" id="input_etiqueta">
+
+        <br>
+        <button type="submit">Guardar</button>
+    </form>
+
+    <script>
+        const video = document.getElementById('video');
+        const snapBtn = document.getElementById('snap');
+        const retryBtn = document.getElementById('retry');
+        const titulo = document.getElementById('titulo_foto');
+
+        const canvasInmueble = document.getElementById('canvas_inmueble');
+        const ctxInmueble = canvasInmueble.getContext('2d');
+        const canvasEtiqueta = document.getElementById('canvas_etiqueta');
+        const ctxEtiqueta = canvasEtiqueta.getContext('2d');
+
+        let etapa = "inmueble";
+        let stream;
+
+        function openCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                    video.style.display = "block";
+                    snapBtn.style.display = "inline-block";
+                    retryBtn.style.display = "none";
+                });
+        }
+
+        function closeCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            video.style.display = "none";
+            snapBtn.style.display = "none";
+            retryBtn.style.display = "inline-block";
+        }
+
+        snapBtn.addEventListener('click', () => {
+            if (etapa === "inmueble") {
+                ctxInmueble.drawImage(video, 0, 0, canvasInmueble.width, canvasInmueble.height);
+                canvasInmueble.toBlob(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        document.getElementById('input_inmueble').value = reader.result;
+                    };
+                    reader.readAsDataURL(blob);
+                });
+                closeCamera();
+                etapa = "etiqueta";
+                titulo.textContent = "Foto de la etiqueta";
+                openCamera();
+            } else if (etapa === "etiqueta") {
+                ctxEtiqueta.drawImage(video, 0, 0, canvasEtiqueta.width, canvasEtiqueta.height);
+                canvasEtiqueta.toBlob(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        document.getElementById('input_etiqueta').value = reader.result;
+                    };
+                    reader.readAsDataURL(blob);
+                });
+                closeCamera();
+                titulo.textContent = "Fotos capturadas";
+            }
+        });
+
+        retryBtn.addEventListener('click', () => {
+            openCamera();
+        });
+
+        // Inicialmente abrir cámara para inmueble
+        openCamera();
+    </script>
+</body>
+</html>
